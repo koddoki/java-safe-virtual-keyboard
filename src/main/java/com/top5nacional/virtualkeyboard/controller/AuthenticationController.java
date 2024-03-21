@@ -36,4 +36,10 @@ public class AuthenticationController {
         System.out.println("Attempt to POST request at /auth/register");
         return authenticationService.loginUserTest(body.getUsername(), body.getPassword());
     }
+
+    @PostMapping("/requestToken")
+    public LoginResponseDTO requestToken() {
+        System.out.println("Attemp to POST request at /auth/RequestToken");
+        return null;
+    }
 }

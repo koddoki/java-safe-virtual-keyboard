@@ -24,20 +24,29 @@ public class VirtualKeyboardApplication {
 	@Bean
 	CommandLineRunner run(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncode){
 		return args ->{
-			if(roleRepository.findByAuthority("ADMIN").isPresent()) return;
-			Role adminRole = roleRepository.save(new Role("ADMIN"));
-			roleRepository.save(new Role("USER"));
-			roleRepository.save(new Role("SESSION"));
+			if(!roleRepository.findByAuthority("ADMIN").isPresent()) {
+				Role adminRole = roleRepository.save(new Role("ADMIN"));
+				Set<Role> roles = new HashSet<>();
+				roles.add(adminRole);
+				User admin = new User(1, "admin", passwordEncode.encode("136"), roles);
+				userRepository.save(admin);
+			}
 
+			if(!roleRepository.findByAuthority("SESSION").isPresent()) {
+				Role sessionRole = roleRepository.save(new Role("SESSION"));
+				Set<Role> roles = new HashSet<>();
+				roles.add(sessionRole);
+				User sessionManager = new User(2, "session", passwordEncode.encode("session"), roles);
+				userRepository.save(sessionManager);
+			}
 
-
-			Set<Role> roles = new HashSet<>();
-			roles.add(adminRole);
-
-			User admin = new User(1, "admin", passwordEncode.encode("136"), roles);
-
-			userRepository.save(admin);
+			if(!roleRepository.findByAuthority("USER").isPresent()) {
+				Role userRole = roleRepository.save(new Role("USER"));
+				Set<Role> roles = new HashSet<>();
+				roles.add(userRole);
+				User martin = new User(3, "Martin", passwordEncode.encode("71483"), roles);
+				userRepository.save(martin);
+			}
 		};
 	}
-
 }
