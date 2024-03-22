@@ -15,16 +15,16 @@ import java.util.Set;
 @Table(name = "sessions")
 public class Session {
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Column(name = "session_id")
-    private String id;
+    private Integer id;
     @Column(name = "keys")
     private String keys;
-    @Column(name = "session_token")
+    @Column(name = "session_token", length = 2048)
     private String sessionToken;
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     @JoinColumn(
-            name = "user_id", unique = true, nullable = false, updatable = false)
+            name = "user_id", unique = false, nullable = false, updatable = false)
     private User user;
     @Column(name = "is_active")
     private boolean isActive;
@@ -72,6 +72,7 @@ public class Session {
                     }
                 }
             }
+            retorno.add(sb.toString());
         }
         return retorno;
     }
