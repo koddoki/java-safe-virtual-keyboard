@@ -29,11 +29,6 @@ public class AuthenticationController {
         return authenticationService.registerUser(body.getUsername(), body.getPassword());
     }
 
-    @PostMapping("/loginn")
-    public LoginResponseDTO loginOld(@RequestBody LoginDTO body){
-        return authenticationService.loginUser(body.getUsername(), body.getPasswordTemp());
-    }
-
     @PostMapping("/login")
     public LoginResponseDTO login(@RequestBody LoginDTO body) {
         System.out.println("Attempt to POST request at /auth/register");
