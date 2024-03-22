@@ -2,6 +2,7 @@ package com.top5nacional.virtualkeyboard.dto;
 
 import com.top5nacional.virtualkeyboard.model.User;
 
+@Deprecated
 public class LoginResponseDTO {
     private User user;
     private String jwt;

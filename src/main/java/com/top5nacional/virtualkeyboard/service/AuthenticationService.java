@@ -1,6 +1,7 @@
 package com.top5nacional.virtualkeyboard.service;
 
 import com.top5nacional.virtualkeyboard.dto.LoginResponseDTO;
+import com.top5nacional.virtualkeyboard.dto.SessionDTO;
 import com.top5nacional.virtualkeyboard.model.Role;
 import com.top5nacional.virtualkeyboard.model.Session;
 import com.top5nacional.virtualkeyboard.model.User;
@@ -10,6 +11,7 @@ import com.top5nacional.virtualkeyboard.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -42,19 +44,27 @@ public class AuthenticationService {
     @Autowired
     private TokenService tokenService;
 
+    @Scheduled(fixedRate = 300000)
+    public void deleteOldRows(){
+        List<Session> oldSessions = sessionRepository.findByTimeOfCreationLessThan(System.currentTimeMillis()-300000);
+        if (oldSessions.isEmpty()) return;
+
+        List<Session> updatedSessions = new ArrayList<>();
+        for (Session session : oldSessions){
+            session.setActive(false);
+            updatedSessions.add(session);
+        }
+        sessionRepository.saveAll(updatedSessions);
+    }
     public User registerUser(String username, String password){
-        System.out.println("1");
         String encodedPassword = passwordEncoder.encode(password);
-        System.out.println("2");
         Role userRole = roleRepository.findByAuthority("USER").get();
-        System.out.println("3");
         Set<Role> authorities = new HashSet<>();
-        System.out.println("4");
         authorities.add(userRole);
-        System.out.println("Chegou nesse ponto");
-        return userRepository.save(new User(0, username, encodedPassword, authorities));
+        return userRepository.save(new User(null, username, encodedPassword, authorities));
     }
 
+    @Deprecated
     public LoginResponseDTO loginUser(String username, String password){
         User user = userRepository.findByUsername(username).get();
 
@@ -72,11 +82,10 @@ public class AuthenticationService {
         }
     }
 
-    public LoginResponseDTO loginUserTest(String username, List<Integer[]> password){
+    public ResponseEntity<String> loginUser(String username, List<Integer[]> password){
         Optional<User> optionalUser = userRepository.findByUsername(username);
 
-        // TODO: Fazer retornar ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT);
-        if (optionalUser.isEmpty()) return null;
+        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
 
         User user = optionalUser.get();
 
@@ -86,7 +95,6 @@ public class AuthenticationService {
         for (List<Integer>binaryCombination:binaryCombinations) {
             List<String> stuff = new ArrayList<>();
             for(Integer binaryNumber:binaryCombination){
-                System.out.println("rawPassword.get(stuff.size())[binaryNumber] = " + password.get(stuff.size())[binaryNumber].toString());
                 stuff.add(password.get(stuff.size())[binaryNumber].toString());
             }
             StringBuilder stringBuilder = new StringBuilder();
@@ -94,8 +102,6 @@ public class AuthenticationService {
             for (String string : stuff){
                 stringBuilder.append(string);
             }
-
-            System.out.println("Olha meu número, que pica: " + stringBuilder.toString());
 
             passwordPossibilities.add(stringBuilder.toString());
         }
@@ -108,29 +114,27 @@ public class AuthenticationService {
 
                 String token = tokenService.generateJwt(auth);
 
-                return new LoginResponseDTO(user, token);
+                return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(token);
 
             } catch(AuthenticationException e){
                 continue;
             }
         }
-        return new LoginResponseDTO(null, "");
+        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
     }
 
-    // TODO 1
-    public ResponseEntity<Session> startSession(String username){
+    public ResponseEntity<SessionDTO> startSession(String username){
         Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
 
         User user = optionalUser.get();
-        if (sessionRepository.existsByUserAndIsActive(user, true)) {
-            List<Session> sessions = sessionRepository.findByUserAndIsActive(user, true);
-            List<Session> updatedSessions = new ArrayList<>();
-            for (Session session : sessions){
-                session.setActive(false);
-                updatedSessions.add(session);
-            }
-            sessionRepository.saveAll(sessions);
+
+        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
+        if (optionalSession.isPresent()){
+            Session session = optionalSession.get();
+            session.setActive(false);
+            sessionRepository.save(session);
+            return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
         }
 
         try {
@@ -150,25 +154,23 @@ public class AuthenticationService {
             sessionRepository.saveAll(newSessions);
 
         } catch(AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
         }
-        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
+        optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
 
         if (optionalSession.isEmpty()){
             System.out.println("Erro fudeu");
-            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
         }
 
         Session session = optionalSession.get();
-
         session.setActive(false);
-
         sessionRepository.save(session);
 
-        return ResponseEntity.status(HttpStatus.OK).body(session);
+        return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
     }
 
-    // TODO 2
+    @Deprecated
     public ResponseEntity<Session> getKeyboard(String username){
         Optional<User> optionalUser = userRepository.findByUsername(username);
         if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
