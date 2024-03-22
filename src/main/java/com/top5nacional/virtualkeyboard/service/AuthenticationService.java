@@ -133,19 +133,60 @@ public class AuthenticationService {
             sessionRepository.saveAll(sessions);
         }
 
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken("session", "session")
+            );
 
+            String token = tokenService.generateJwt(auth);
 
+            List<String> passwords = Session.generateCombinationsPassword(1000);
+            List<Session> newSessions = new ArrayList<>();
 
+            for(String password : passwords){
+                Session session = new Session(password, token, user, true, System.currentTimeMillis());
+                newSessions.add(session);
+            }
+            sessionRepository.saveAll(newSessions);
 
-        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        } catch(AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        }
+        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
+
+        if (optionalSession.isEmpty()){
+            System.out.println("Erro fudeu");
+            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        }
+
+        Session session = optionalSession.get();
+
+        session.setActive(false);
+
+        sessionRepository.save(session);
+
+        return ResponseEntity.status(HttpStatus.OK).body(session);
     }
 
     // TODO 2
     public ResponseEntity<Session> getKeyboard(String username){
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
 
+        User user = optionalUser.get();
 
+        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
 
-        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        if (optionalSession.isEmpty()){
+            System.out.println("Erro fudeu");
+            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+        }
+
+        Session session = optionalSession.get();
+        session.setActive(false);
+        sessionRepository.save(session);
+
+        return ResponseEntity.status(HttpStatus.OK).body(session);
     }
 
     protected static List<List<Integer>> generateBinaryCombinations(int n) {

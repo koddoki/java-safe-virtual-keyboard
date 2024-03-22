@@ -15,6 +15,7 @@ import java.util.Set;
 @Table(name = "sessions")
 public class Session {
     @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
     @Column(name = "session_id")
     private String id;
     @Column(name = "keys")
@@ -29,7 +30,16 @@ public class Session {
     private boolean isActive;
     @Column(name = "time_of_creation")
     private long timeOfCreation;
-    
+
+    public Session(){};
+    public Session(String keys, String sessionToken, User user, boolean isActive, long timeOfCreation) {
+        this.keys = keys;
+        this.sessionToken = sessionToken;
+        this.user = user;
+        this.isActive = isActive;
+        this.timeOfCreation = timeOfCreation;
+    }
+
     public static Set<List<Integer>> generateCombinations(int amountOfCombinations) {
         Set<List<Integer>> combinations = new HashSet<>();
         List<Integer> numbers = new ArrayList<>();
@@ -44,5 +54,25 @@ public class Session {
         }
 
         return combinations;
+    }
+
+    public static List<String> generateCombinationsPassword(int amountOfCombinations) {
+        Set<List<Integer>> combinations = Session.generateCombinations(amountOfCombinations);
+        List<String> retorno = new ArrayList<>();
+
+        for(List<Integer> numbers : combinations){
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < numbers.size(); i += 2) {
+                sb.append(numbers.get(i));
+                if (i + 1 < numbers.size()) {
+                    sb.append(",");
+                    sb.append(numbers.get(i + 1));
+                    if (i + 2 < numbers.size()) {
+                        sb.append(";");
+                    }
+                }
+            }
+        }
+        return retorno;
     }
 }

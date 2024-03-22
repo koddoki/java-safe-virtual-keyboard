@@ -29,21 +29,27 @@ public class AuthenticationController {
         return authenticationService.registerUser(body.getUsername(), body.getPassword());
     }
 
-    @PostMapping("/login")
-    public LoginResponseDTO loginUser(@RequestBody LoginDTO body){
+    @PostMapping("/loginn")
+    public LoginResponseDTO loginOld(@RequestBody LoginDTO body){
         return authenticationService.loginUser(body.getUsername(), body.getPasswordTemp());
     }
 
-    @PostMapping("/testas")
-    public LoginResponseDTO éOTestas(@RequestBody LoginDTO body) {
+    @PostMapping("/login")
+    public LoginResponseDTO login(@RequestBody LoginDTO body) {
         System.out.println("Attempt to POST request at /auth/register");
         return authenticationService.loginUserTest(body.getUsername(), body.getPassword());
     }
 
-    @PostMapping("/requestToken")
-    public ResponseEntity<Session> requestToken() {
+    @PostMapping("/startSession")
+    public ResponseEntity<Session> startSession(@RequestParam String username) {
         System.out.println("Attempt to POST request at /auth/RequestToken");
         Session session = new Session();
-        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(session);
+        return authenticationService.startSession(username);
+    }
+
+    @PostMapping("/getKeyboard")
+    public ResponseEntity<Session> getKeyboard(@RequestParam String username) {
+        System.out.println("Attempt to POST request at /auth/RequestToken");
+        return authenticationService.getKeyboard(username);
     }
 }
