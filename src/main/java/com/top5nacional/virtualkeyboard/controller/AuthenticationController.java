@@ -3,9 +3,12 @@ package com.top5nacional.virtualkeyboard.controller;
 import com.top5nacional.virtualkeyboard.dto.LoginDTO;
 import com.top5nacional.virtualkeyboard.dto.LoginResponseDTO;
 import com.top5nacional.virtualkeyboard.dto.RegistrationDTO;
+import com.top5nacional.virtualkeyboard.model.Session;
 import com.top5nacional.virtualkeyboard.model.User;
 import com.top5nacional.virtualkeyboard.service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -38,8 +41,9 @@ public class AuthenticationController {
     }
 
     @PostMapping("/requestToken")
-    public LoginResponseDTO requestToken() {
-        System.out.println("Attemp to POST request at /auth/RequestToken");
-        return null;
+    public ResponseEntity<Session> requestToken() {
+        System.out.println("Attempt to POST request at /auth/RequestToken");
+        Session session = new Session();
+        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(session);
     }
 }

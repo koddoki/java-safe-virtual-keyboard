@@ -24,7 +24,7 @@ public class VirtualKeyboardApplication {
 	@Bean
 	CommandLineRunner run(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncode){
 		return args ->{
-			if(!roleRepository.findByAuthority("ADMIN").isPresent()) {
+			if(roleRepository.findByAuthority("ADMIN").isEmpty()) {
 				Role adminRole = roleRepository.save(new Role("ADMIN"));
 				Set<Role> roles = new HashSet<>();
 				roles.add(adminRole);
@@ -32,7 +32,7 @@ public class VirtualKeyboardApplication {
 				userRepository.save(admin);
 			}
 
-			if(!roleRepository.findByAuthority("SESSION").isPresent()) {
+			if(roleRepository.findByAuthority("SESSION").isEmpty()) {
 				Role sessionRole = roleRepository.save(new Role("SESSION"));
 				Set<Role> roles = new HashSet<>();
 				roles.add(sessionRole);
@@ -40,7 +40,7 @@ public class VirtualKeyboardApplication {
 				userRepository.save(sessionManager);
 			}
 
-			if(!roleRepository.findByAuthority("USER").isPresent()) {
+			if(roleRepository.findByAuthority("USER").isEmpty()) {
 				Role userRole = roleRepository.save(new Role("USER"));
 				Set<Role> roles = new HashSet<>();
 				roles.add(userRole);

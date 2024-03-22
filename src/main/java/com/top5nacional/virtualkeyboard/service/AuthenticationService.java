@@ -2,10 +2,14 @@ package com.top5nacional.virtualkeyboard.service;
 
 import com.top5nacional.virtualkeyboard.dto.LoginResponseDTO;
 import com.top5nacional.virtualkeyboard.model.Role;
+import com.top5nacional.virtualkeyboard.model.Session;
 import com.top5nacional.virtualkeyboard.model.User;
 import com.top5nacional.virtualkeyboard.repository.RoleRepository;
+import com.top5nacional.virtualkeyboard.repository.SessionRepository;
 import com.top5nacional.virtualkeyboard.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,10 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @Transactional
@@ -28,6 +29,9 @@ public class AuthenticationService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private SessionRepository sessionRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -69,7 +73,13 @@ public class AuthenticationService {
     }
 
     public LoginResponseDTO loginUserTest(String username, List<Integer[]> password){
-        User user = userRepository.findByUsername(username).get();
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+
+        // TODO: Fazer retornar ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT);
+        if (optionalUser.isEmpty()) return null;
+
+        User user = optionalUser.get();
+
         List<List<Integer>> binaryCombinations = generateBinaryCombinations(password.size());
         List<String> passwordPossibilities = new ArrayList<>();
 
@@ -105,16 +115,46 @@ public class AuthenticationService {
             }
         }
         return new LoginResponseDTO(null, "");
+    }
 
+    // TODO 1
+    public ResponseEntity<Session> startSession(String username){
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+
+        User user = optionalUser.get();
+        if (sessionRepository.existsByUserAndIsActive(user, true)) {
+            List<Session> sessions = sessionRepository.findByUserAndIsActive(user, true);
+            List<Session> updatedSessions = new ArrayList<>();
+            for (Session session : sessions){
+                session.setActive(false);
+                updatedSessions.add(session);
+            }
+            sessionRepository.saveAll(sessions);
+        }
+
+
+
+
+
+        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+    }
+
+    // TODO 2
+    public ResponseEntity<Session> getKeyboard(String username){
+
+
+
+        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
     }
 
     protected static List<List<Integer>> generateBinaryCombinations(int n) {
         List<List<Integer>> result = new ArrayList<>();
-        generateCombinations(n, new ArrayList<>(), result);
+        generatePasswordPossibilities(n, new ArrayList<>(), result);
         return result;
     }
 
-    protected static void generateCombinations(int n, List<Integer> current, List<List<Integer>> result) {
+    protected static void generatePasswordPossibilities(int n, List<Integer> current, List<List<Integer>> result) {
         if (n == 0) {
             result.add(new ArrayList<>(current));
             return;
@@ -122,8 +162,8 @@ public class AuthenticationService {
 
         for (int i = 0; i <= 1; i++) {
             current.add(i);
-            generateCombinations(n - 1, current, result);
-            current.remove(current.size() - 1);
+            generatePasswordPossibilities(n - 1, current, result);
+            current.removeLast();
         }
     }
 }
