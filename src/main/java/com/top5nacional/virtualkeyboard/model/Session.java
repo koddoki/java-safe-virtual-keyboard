@@ -3,12 +3,8 @@ package com.top5nacional.virtualkeyboard.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Data
 @Entity
@@ -40,25 +36,25 @@ public class Session {
         this.timeOfCreation = timeOfCreation;
     }
 
-    public static Set<List<Integer>> generateCombinations(int amountOfCombinations) {
-        Set<List<Integer>> combinations = new HashSet<>();
+    private static Set<List<Integer>> generateRandomNumberSequences(int amountOfCombinations) {
+        Set<List<Integer>> numberSequences = new HashSet<>();
         List<Integer> numbers = new ArrayList<>();
 
         for (int i = 0; i < 10; i++) {
             numbers.add(i);
         }
 
-        while (combinations.size() < amountOfCombinations) {
+        while (numberSequences.size() < amountOfCombinations) {
             Collections.shuffle(numbers, new Random());
-            combinations.add(new ArrayList<>(numbers));
+            numberSequences.add(new ArrayList<>(numbers));
         }
 
-        return combinations;
+        return numberSequences;
     }
 
-    public static List<String> generateCombinationsPassword(int amountOfCombinations) {
-        Set<List<Integer>> combinations = Session.generateCombinations(amountOfCombinations);
-        List<String> retorno = new ArrayList<>();
+    public static List<String> generateRandomKeys(int amountOfCombinations) {
+        Set<List<Integer>> combinations = Session.generateRandomNumberSequences(amountOfCombinations);
+        List<String> passwords = new ArrayList<>();
 
         for(List<Integer> numbers : combinations){
             StringBuilder sb = new StringBuilder();
@@ -72,8 +68,16 @@ public class Session {
                     }
                 }
             }
-            retorno.add(sb.toString());
+            passwords.add(sb.toString());
         }
-        return retorno;
+        return passwords;
+    }
+
+    public static List<List<Integer>> convertKeysToList(String stringKeys) {
+        return Arrays.stream(stringKeys.split(";"))
+                .map(innerKey -> Arrays.stream(innerKey.split(","))
+                    .map(Integer::parseInt)
+                    .collect(Collectors.toList()))
+                .collect(Collectors.toList());
     }
 }

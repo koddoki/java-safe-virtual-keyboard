@@ -4,16 +4,21 @@ import com.top5nacional.virtualkeyboard.model.Session;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class SessionDTO {
-    private String keys;
+    private List<List<Integer>> keys;
     private String sessionToken;
-    private boolean isActive;
 
     public SessionDTO(Session session) {
-        this.keys = session.getKeys();
+        this.keys = Session.convertKeysToList(session.getKeys());
         this.sessionToken = session.getSessionToken();
-        this.isActive = session.isActive();
+    }
+
+    public SessionDTO(List<List<Integer>> keys, String sessionToken) {
+        this.keys = keys;
+        this.sessionToken = sessionToken;
     }
 }

@@ -2,10 +2,8 @@ package com.top5nacional.virtualkeyboard.service;
 
 import com.top5nacional.virtualkeyboard.dto.LoginResponseDTO;
 import com.top5nacional.virtualkeyboard.dto.SessionDTO;
-import com.top5nacional.virtualkeyboard.model.Role;
 import com.top5nacional.virtualkeyboard.model.Session;
 import com.top5nacional.virtualkeyboard.model.User;
-import com.top5nacional.virtualkeyboard.repository.RoleRepository;
 import com.top5nacional.virtualkeyboard.repository.SessionRepository;
 import com.top5nacional.virtualkeyboard.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +14,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +23,12 @@ import java.util.*;
 @Transactional
 public class AuthenticationService {
 
+    // TODO: Study why field injection is not recommended
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
     private SessionRepository sessionRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -45,7 +37,7 @@ public class AuthenticationService {
     private TokenService tokenService;
 
     @Scheduled(fixedRate = 300000)
-    public void deleteOldRows(){
+    public void deleteOldSessions(){
         List<Session> oldSessions = sessionRepository.findByTimeOfCreationLessThan(System.currentTimeMillis()-300000);
         if (oldSessions.isEmpty()) return;
 
@@ -56,55 +48,16 @@ public class AuthenticationService {
         }
         sessionRepository.saveAll(updatedSessions);
     }
-    public User registerUser(String username, String password){
-        String encodedPassword = passwordEncoder.encode(password);
-        Role userRole = roleRepository.findByAuthority("USER").get();
-        Set<Role> authorities = new HashSet<>();
-        authorities.add(userRole);
-        return userRepository.save(new User(null, username, encodedPassword, authorities));
-    }
 
-    @Deprecated
-    public LoginResponseDTO loginUser(String username, String password){
-        User user = userRepository.findByUsername(username).get();
-
-        try{
-            Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
-
-            String token = tokenService.generateJwt(auth);
-
-            return new LoginResponseDTO(user, token);
-
-        } catch(AuthenticationException e){
-            return new LoginResponseDTO(null, "");
-        }
-    }
-
-    public ResponseEntity<String> loginUser(String username, List<Integer[]> password){
+    public ResponseEntity<?> loginUser(String username, List<Integer[]> password){
         Optional<User> optionalUser = userRepository.findByUsername(username);
 
-        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
+        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password.");
 
         User user = optionalUser.get();
 
         List<List<Integer>> binaryCombinations = generateBinaryCombinations(password.size());
-        List<String> passwordPossibilities = new ArrayList<>();
-
-        for (List<Integer>binaryCombination:binaryCombinations) {
-            List<String> stuff = new ArrayList<>();
-            for(Integer binaryNumber:binaryCombination){
-                stuff.add(password.get(stuff.size())[binaryNumber].toString());
-            }
-            StringBuilder stringBuilder = new StringBuilder();
-
-            for (String string : stuff){
-                stringBuilder.append(string);
-            }
-
-            passwordPossibilities.add(stringBuilder.toString());
-        }
+        List<String> passwordPossibilities = generatePasswordPossibilities(binaryCombinations, password);
 
         for (String passwordPossibililty : passwordPossibilities){
             try{
@@ -114,18 +67,34 @@ public class AuthenticationService {
 
                 String token = tokenService.generateJwt(auth);
 
-                return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(token);
+                return ResponseEntity.status(HttpStatus.OK).body(new LoginResponseDTO(user.getUsername(), token));
 
-            } catch(AuthenticationException e){
-                continue;
+            } catch (AuthenticationException e){
+                // There is nothing I want to do in here, but since my IDE likes to complain, I'm writing this down
             }
         }
-        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password.");
     }
 
-    public ResponseEntity<SessionDTO> startSession(String username){
+    public ResponseEntity<?> startSession(String username){
         Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
+        if (optionalUser.isEmpty()) {
+            try {
+                Authentication auth = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken("session", "session")
+                );
+
+                String uselessToken = tokenService.generateJwt(auth);
+                String uselessKeys = Session.generateRandomKeys(1).getFirst();
+
+                return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(Session.convertKeysToList(uselessKeys), uselessToken));
+
+            } catch(AuthenticationException e) {
+                // TODO: Replace this with a proper logger library.
+                System.out.println("It was not possible to log in with the session user.");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
+            }
+        }
 
         User user = optionalUser.get();
 
@@ -144,7 +113,7 @@ public class AuthenticationService {
 
             String token = tokenService.generateJwt(auth);
 
-            List<String> passwords = Session.generateCombinationsPassword(1000);
+            List<String> passwords = Session.generateRandomKeys(1000);
             List<Session> newSessions = new ArrayList<>();
 
             for(String password : passwords){
@@ -154,13 +123,14 @@ public class AuthenticationService {
             sessionRepository.saveAll(newSessions);
 
         } catch(AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
+            System.out.println("It was not possible to log in with the session user.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
         }
         optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
 
         if (optionalSession.isEmpty()){
-            System.out.println("Erro fudeu");
-            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(null);
+            System.out.println("No keyboard session was created.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
         }
 
         Session session = optionalSession.get();
@@ -170,34 +140,33 @@ public class AuthenticationService {
         return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
     }
 
-    @Deprecated
-    public ResponseEntity<Session> getKeyboard(String username){
-        Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+    private static List<String> generatePasswordPossibilities(List<List<Integer>> binaryCombinations, List<Integer[]> password){
+        List<String> passwordPossibilities = new ArrayList<>();
 
-        User user = optionalUser.get();
+        for (List<Integer>binaryCombination:binaryCombinations) {
+            List<String> stuff = new ArrayList<>();
+            for(Integer binaryNumber:binaryCombination){
+                stuff.add(password.get(stuff.size())[binaryNumber].toString());
+            }
+            StringBuilder stringBuilder = new StringBuilder();
 
-        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
+            for (String string : stuff){
+                stringBuilder.append(string);
+            }
 
-        if (optionalSession.isEmpty()){
-            System.out.println("Erro fudeu");
-            return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(new Session());
+            passwordPossibilities.add(stringBuilder.toString());
         }
 
-        Session session = optionalSession.get();
-        session.setActive(false);
-        sessionRepository.save(session);
-
-        return ResponseEntity.status(HttpStatus.OK).body(session);
+        return passwordPossibilities;
     }
 
-    protected static List<List<Integer>> generateBinaryCombinations(int n) {
+    private static List<List<Integer>> generateBinaryCombinations(int n) {
         List<List<Integer>> result = new ArrayList<>();
-        generatePasswordPossibilities(n, new ArrayList<>(), result);
+        generateBinaryCombinations(n, new ArrayList<>(), result);
         return result;
     }
 
-    protected static void generatePasswordPossibilities(int n, List<Integer> current, List<List<Integer>> result) {
+    private static void generateBinaryCombinations(int n, List<Integer> current, List<List<Integer>> result) {
         if (n == 0) {
             result.add(new ArrayList<>(current));
             return;
@@ -205,7 +174,7 @@ public class AuthenticationService {
 
         for (int i = 0; i <= 1; i++) {
             current.add(i);
-            generatePasswordPossibilities(n - 1, current, result);
+            generateBinaryCombinations(n - 1, current, result);
             current.removeLast();
         }
     }

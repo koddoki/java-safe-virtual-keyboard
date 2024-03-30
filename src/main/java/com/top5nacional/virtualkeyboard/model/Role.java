@@ -1,6 +1,8 @@
 package com.top5nacional.virtualkeyboard.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 
 import jakarta.persistence.Column;
@@ -11,6 +13,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name="roles")
 public class Role implements GrantedAuthority {
@@ -22,16 +26,7 @@ public class Role implements GrantedAuthority {
 
     private String authority;
 
-    public Role(){
-        super();
-    }
-
     public Role(String authority){
-        this.authority = authority;
-    }
-
-    public Role(Integer roleId, String authority){
-        this.roleId = roleId;
         this.authority = authority;
     }
 

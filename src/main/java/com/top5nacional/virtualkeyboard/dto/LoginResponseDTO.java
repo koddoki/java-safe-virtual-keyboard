@@ -1,35 +1,14 @@
 package com.top5nacional.virtualkeyboard.dto;
 
 import com.top5nacional.virtualkeyboard.model.User;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Deprecated
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginResponseDTO {
-    private User user;
+    private String username;
     private String jwt;
-
-    public LoginResponseDTO(){
-        super();
-    }
-
-    public LoginResponseDTO(User user, String jwt){
-        this.user = user;
-        this.jwt = jwt;
-    }
-
-    public User getUser(){
-        return this.user;
-    }
-
-    public void setUser(User user){
-        this.user = user;
-    }
-
-    public String getJwt(){
-        return this.jwt;
-    }
-
-    public void setJwt(String jwt){
-        this.jwt = jwt;
-    }
-
 }

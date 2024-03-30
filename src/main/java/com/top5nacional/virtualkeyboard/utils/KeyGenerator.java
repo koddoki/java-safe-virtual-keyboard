@@ -3,7 +3,7 @@ package com.top5nacional.virtualkeyboard.utils;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 
-public class KeyGeneratorUtility {
+public class KeyGenerator {
 
     public static KeyPair generateRsaKey(){
 
