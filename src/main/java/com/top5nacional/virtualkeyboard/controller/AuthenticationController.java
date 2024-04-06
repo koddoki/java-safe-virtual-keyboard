@@ -1,8 +1,6 @@
 package com.top5nacional.virtualkeyboard.controller;
 
 import com.top5nacional.virtualkeyboard.dto.LoginDTO;
-import com.top5nacional.virtualkeyboard.dto.RegisterUserDTO;
-import com.top5nacional.virtualkeyboard.model.Session;
 import com.top5nacional.virtualkeyboard.service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +21,15 @@ public class AuthenticationController {
         return authenticationService.loginUser(body.getUsername(), body.getPassword());
     }
 
-    @PostMapping("/getKeyboard")
-    public ResponseEntity<?> startSession(@RequestParam String username) {
+    @PostMapping("/start-session")
+    public ResponseEntity<?> startSession() {
         System.out.println("Attempt to POST request at /auth/RequestToken");
-        Session session = new Session();
-        return authenticationService.startSession(username);
+        return authenticationService.startSession();
+    }
+
+    @GetMapping("/get-session")
+    public ResponseEntity<?> getSession(@RequestHeader("Authorization") String bearerToken) {
+        System.out.println("Attempt to POST request at /auth/RequestToken");
+        return authenticationService.getSession(bearerToken);
     }
 }

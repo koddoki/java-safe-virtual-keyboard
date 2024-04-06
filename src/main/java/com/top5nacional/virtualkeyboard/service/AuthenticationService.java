@@ -39,7 +39,8 @@ public class AuthenticationService {
     @Scheduled(fixedRate = 300000)
     public void deleteOldSessions(){
         List<Session> oldSessions = sessionRepository.findByTimeOfCreationLessThan(System.currentTimeMillis()-300000);
-        if (oldSessions.isEmpty()) return;
+        if (oldSessions.isEmpty())
+            return;
 
         List<Session> updatedSessions = new ArrayList<>();
         for (Session session : oldSessions){
@@ -52,7 +53,8 @@ public class AuthenticationService {
     public ResponseEntity<?> loginUser(String username, List<Integer[]> password){
         Optional<User> optionalUser = userRepository.findByUsername(username);
 
-        if (optionalUser.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password.");
+        if (optionalUser.isEmpty())
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password.");
 
         User user = optionalUser.get();
 
@@ -70,42 +72,27 @@ public class AuthenticationService {
                 return ResponseEntity.status(HttpStatus.OK).body(new LoginResponseDTO(user.getUsername(), token));
 
             } catch (AuthenticationException e){
-                // There is nothing I want to do in here, but since my IDE likes to complain, I'm writing this down
+                // There is nothing I want to do in here, but since my IDE likes to complain, I'm writing this down =)
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password.");
     }
+    
+    public ResponseEntity<?> getSession(String bearerToken){
+        String token = bearerToken.substring(7);
 
-    public ResponseEntity<?> startSession(String username){
-        Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isEmpty()) {
-            try {
-                Authentication auth = authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken("session", "session")
-                );
+        Optional<Session> optionalSession = sessionRepository.findFirstBySessionTokenAndIsActive(token, true);
+        if (optionalSession.isEmpty())
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid session token. Please, log-in again.");
 
-                String uselessToken = tokenService.generateJwt(auth);
-                String uselessKeys = Session.generateRandomKeys(1).getFirst();
+        Session session = optionalSession.get();
+        if (!session.isActive())
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Session token expired.");
 
-                return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(Session.convertKeysToList(uselessKeys), uselessToken));
+        return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
+    }
 
-            } catch(AuthenticationException e) {
-                // TODO: Replace this with a proper logger library.
-                System.out.println("It was not possible to log in with the session user.");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
-            }
-        }
-
-        User user = optionalUser.get();
-
-        Optional<Session> optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
-        if (optionalSession.isPresent()){
-            Session session = optionalSession.get();
-            session.setActive(false);
-            sessionRepository.save(session);
-            return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
-        }
-
+    public ResponseEntity<?> startSession() {
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken("session", "session")
@@ -113,33 +100,18 @@ public class AuthenticationService {
 
             String token = tokenService.generateJwt(auth);
 
-            List<String> passwords = Session.generateRandomKeys(1000);
-            List<Session> newSessions = new ArrayList<>();
+            String password = Session.generateRandomKey();
+            Session session = new Session(password, token);
 
-            for(String password : passwords){
-                Session session = new Session(password, token, user, true, System.currentTimeMillis());
-                newSessions.add(session);
-            }
-            sessionRepository.saveAll(newSessions);
+            sessionRepository.save(session);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
 
         } catch(AuthenticationException e) {
             System.out.println("It was not possible to log in with the session user.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
         }
-        optionalSession = sessionRepository.findFirstByUserAndIsActive(user, true);
-
-        if (optionalSession.isEmpty()){
-            System.out.println("No keyboard session was created.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something happened!");
-        }
-
-        Session session = optionalSession.get();
-        session.setActive(false);
-        sessionRepository.save(session);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new SessionDTO(session));
     }
-
     private static List<String> generatePasswordPossibilities(List<List<Integer>> binaryCombinations, List<Integer[]> password){
         List<String> passwordPossibilities = new ArrayList<>();
 

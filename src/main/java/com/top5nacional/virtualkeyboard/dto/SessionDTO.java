@@ -16,9 +16,4 @@ public class SessionDTO {
         this.keys = Session.convertKeysToList(session.getKeys());
         this.sessionToken = session.getSessionToken();
     }
-
-    public SessionDTO(List<List<Integer>> keys, String sessionToken) {
-        this.keys = keys;
-        this.sessionToken = sessionToken;
-    }
 }

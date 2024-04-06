@@ -11,8 +11,6 @@ import java.util.List;
 @Repository
 public interface SessionRepository extends JpaRepository<Session, Integer> {
     Optional<Session> findById(Integer id);
-    Optional<Session> findFirstByUserAndIsActive(User user, boolean isActive);
-    List<Session> findByUserAndIsActive(User user, boolean isActive);
+    Optional<Session> findFirstBySessionTokenAndIsActive(String sessionToken, boolean isActive);
     List<Session> findByTimeOfCreationLessThan(long timestamp);
-    boolean existsByUserAndIsActive(User user, boolean isActive);
 }
